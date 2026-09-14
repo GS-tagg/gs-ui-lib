@@ -1,13 +1,13 @@
-use crate::config::{config, load_runtime_config, save_runtime_config};
 use crate::input::InputState;
-use crate::renderer::{fps::FpsTracker, gpu::GpuState, gpu::Vertex};
+use crate::gpu::{GpuState, Vertex};
+use crate::debug::{FpsTracker};
+use crate::config::{config, load_runtime_config, save_runtime_config};
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{Window, WindowAttributes};
+use winit::window::{Window, WindowAttributes};#[derive(Default)]
 
-#[derive(Default)]
 struct App {
     window: Option<Arc<Window>>,
     gpu: Option<GpuState>,
