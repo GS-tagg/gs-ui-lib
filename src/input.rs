@@ -1,32 +1,43 @@
+
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-
+ 
 use winit::event::{ElementState, MouseButton, WindowEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
-
+ 
 pub struct InputState {
-    pub mouse: MouseTracker,
-    pub keyboard: KeyBoardTracker,
+    pub mouse: MouseHandler,
+    pub keyboard: KeyboardHandler,
 }
-
+ 
 impl InputState {
     pub fn new() -> Self {
         Self {
-            mouse: MouseTracker::new(),
-            keyboard: KeyBoardTracker::new(),
+            mouse: MouseHandler::new(),
+            keyboard: KeyboardHandler::new(),
         }
     }
-
+ 
     pub fn update(&mut self, event: &WindowEvent) {
         match event {
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse.set_position([position.x, position.y]);
             }
-            WindowEvent::MouseInput { state, button, .. } => match state {
-                ElementState::Pressed => self.mouse.press(*button),
-                ElementState::Released => self.mouse.release(*button),
-            },
+            WindowEvent::MouseInput { state, button, .. } => {
+                if crate::config::config().input_debug_enabled {
+                    println!("[input] mouse {button:?} {state:?}");
+                }
+ 
+                match state {
+                    ElementState::Pressed => self.mouse.press(*button),
+                    ElementState::Released => self.mouse.release(*button),
+                }
+            }
             WindowEvent::KeyboardInput { event, .. } => {
+                if crate::config::config().input_debug_enabled {
+                    println!("[input] key {:?} {:?}", event.physical_key, event.state);
+                }
+ 
                 if let PhysicalKey::Code(code) = event.physical_key {
                     self.keyboard.update(code, event.state);
                 }
@@ -47,12 +58,12 @@ impl Default for InputState {
     }
 }
 
-pub struct MouseTracker {
+pub struct MouseHandler {
     pos: [f64; 2],
     buttons: HashMap<MouseButton, Instant>,
 }
 
-impl MouseTracker {
+impl MouseHandler {
     pub fn new() -> Self {
         Self {
             pos: [0.0, 0.0],
@@ -81,7 +92,7 @@ impl MouseTracker {
     }
 }
 
-impl Default for MouseTracker {
+impl Default for MouseHandler {
     fn default() -> Self {
         Self::new()
     }
@@ -143,11 +154,11 @@ impl KeyState {
     }
 }
 
-pub struct KeyBoardTracker {
+pub struct KeyboardHandler {
     keymap: HashMap<KeyCode, KeyState>,
 }
 
-impl KeyBoardTracker {
+impl KeyboardHandler {
     pub fn new() -> Self {
         Self {
             keymap: HashMap::new(),
@@ -207,7 +218,7 @@ impl KeyBoardTracker {
     }
 }
 
-impl Default for KeyBoardTracker {
+impl Default for KeyboardHandler {
     fn default() -> Self {
         Self::new()
     }

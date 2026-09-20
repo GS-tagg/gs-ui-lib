@@ -25,7 +25,7 @@ impl Default for RuntimeConfig {
 impl RuntimeConfig {
     pub fn clamp(&mut self) {
         if self.target_fps == 0 {
-            self.target_fps = 1;
+            self.target_fps = 30;
         }
     }
 }
