@@ -1,0 +1,5 @@
+<ui>
+    <button x="50" y="50" width="150" height="40" label="Click me" />
+    <checkbox x="50" y="110" width="20" height="20" checked="false" />
+    <panel x="50" y="150" width="200" height="30" />
+</ui>

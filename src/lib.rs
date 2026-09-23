@@ -1,6 +1,6 @@
-mod window;
-mod debug;
-mod input;
-mod gpu;
-mod config;
+pub mod window;
+pub mod debug;
+pub mod input;
+pub mod gpu;
+pub mod config;
 
