@@ -1,15 +1,14 @@
-
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
- 
+
 use winit::event::{ElementState, MouseButton, WindowEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
- 
+
 pub struct InputState {
     pub mouse: MouseHandler,
     pub keyboard: KeyboardHandler,
 }
- 
+
 impl InputState {
     pub fn new() -> Self {
         Self {
@@ -17,7 +16,7 @@ impl InputState {
             keyboard: KeyboardHandler::new(),
         }
     }
- 
+
     pub fn update(&mut self, event: &WindowEvent) {
         match event {
             WindowEvent::CursorMoved { position, .. } => {
@@ -25,9 +24,10 @@ impl InputState {
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 if crate::config::config().input_debug_enabled {
-                    println!("[input] mouse {button:?} {state:?}");
+                    let pos = self.mouse.position();
+                    println!("[input] mouse {button:?} {state:?} {pos:?}");
                 }
- 
+
                 match state {
                     ElementState::Pressed => self.mouse.press(*button),
                     ElementState::Released => self.mouse.release(*button),
@@ -37,7 +37,7 @@ impl InputState {
                 if crate::config::config().input_debug_enabled {
                     println!("[input] key {:?} {:?}", event.physical_key, event.state);
                 }
- 
+
                 if let PhysicalKey::Code(code) = event.physical_key {
                     self.keyboard.update(code, event.state);
                 }

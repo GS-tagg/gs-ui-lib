@@ -1,17 +1,29 @@
-1920*1080
-2560*1080
-1200*800
+pub struct Bounds {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+}
 
-xxxx*1000
-1778*1000
-2370*1000
-1500*1000
+impl Bounds {
+    pub fn contains_point(&self, px: f32, py: f32) -> bool {
+        px >= self.x
+            && px <= self.x + self.width
+            && py >= self.y
+            && py <= self.y + self.height
+    }
+}
 
-if pos = < middle
-    left_anchor = true
-    stick element to the side of anchor, 
-    always the same distance from the edge
-    (relative to the height)
+impl UiElement {
+    pub fn bounds(&self) -> &Bounds {
+        match self {
+            UiElement::Button { bounds, .. } => bounds,
+            UiElement::Checkbox { bounds, .. } => bounds,
+            UiElement::Panel { bounds, .. } => bounds,
+        }
+    }
 
-    ypx y/1000
-    c
+    pub fn contains_point(&self, px: f32, py: f32) -> bool {
+        self.bounds().contains_point(px, py)
+    }
+}
