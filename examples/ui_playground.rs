@@ -114,7 +114,7 @@ fn collect_elements(node: &Node, out: &mut Vec<UiElement>) {
     }
 }
 
-// --- App ---
+// --- App init ---
 
 #[derive(Default)]
 struct App {
@@ -123,6 +123,7 @@ struct App {
     fps: Option<FpsTracker>,
     input: InputState,
     ui_elements: Vec<UiElement>,
+    pressed_index: Option<usize>,  
 }
 
 impl ApplicationHandler for App {
