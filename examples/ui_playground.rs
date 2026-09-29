@@ -11,7 +11,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowAttributes};
 use winit::dpi::PhysicalSize;
 
-// --- UI types ---
+// --- UI types (to be removed) ---
 
 pub struct Bounds {
     pub x: f32,
@@ -49,7 +49,7 @@ impl UiElement {
     }
 }
 
-// --- XML -> GPU + UI element builders ---
+// --- XML -> GPU + UI element builders (to be removed) ---
 
 fn build_ui(xml_path: &str, window_size: PhysicalSize<u32>) -> (Vec<Vertex>, Vec<UiElement>) {
     let xml = std::fs::read_to_string(xml_path).expect("failed to read ui xml");
@@ -164,18 +164,35 @@ impl ApplicationHandler for App {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => gpu.resize(size),
-            WindowEvent::MouseInput { state, button, .. } => {
-                if button == MouseButton::Left && state == ElementState::Pressed {
-                    let [mx, my] = self.input.mouse.position();
-                    for element in &self.ui_elements {
-                        if element.contains_point(mx as f32, my as f32) {
-                            if let UiElement::Button { label, .. } = element {
-                                println!("[ui] button pressed: {label}");
-                            }
-                        }
-                    }
-                }
-            }
+	    WindowEvent::MouseInput{ state,   button, ..} => {
+		//button press (to be moved)
+	    if button == MouseButton::Left {
+		let [mx, my] = self.input.mouse.position();
+		let (mx, my) = (mx as f32, my as f32);
+
+		// index of the element under the cursor, if any
+		let hit = self
+		    .ui_elements
+		    .iter()
+		    .position(|e| e.contains_point(mx, my));
+
+		match state {
+		    ElementState::Pressed => {
+			self.pressed_index = hit;
+		    }
+		    ElementState::Released => {
+			let started = self.pressed_index.take();
+			if let (Some(start), Some(end)) = (started, hit) {
+			    if start == end {
+				if let UiElement::Button { label, .. } = &self.ui_elements[end] {
+				    println!("[ui] button clicked: {label}");
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	    }
             WindowEvent::RedrawRequested => {
                 let start = fps.begin_render();
                 if let Err(e) = gpu.render() {
@@ -202,6 +219,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fps: None,
         input: InputState::new(),
         ui_elements: Vec::new(),
+	pressed_index: None,
     };
     event_loop.run_app(&mut app)?;
     Ok(())
