@@ -1,119 +1,14 @@
-use gs_ui_lib::gpu::{GpuState, Vertex};
-use gs_ui_lib::input::InputState;
-use gs_ui_lib::debug::FpsTracker;
 use gs_ui_lib::config::{config, load_runtime_config};
-use gs_xml_parser::{tokenize, parse, Node};
+use gs_ui_lib::debug::FpsTracker;
+use gs_ui_lib::element::{UiElement, build_ui, hit_test};
+use gs_ui_lib::gpu::GpuState;
+use gs_ui_lib::input::InputState;
 
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
-use winit::event::{WindowEvent, MouseButton, ElementState};
+use winit::event::{ElementState, MouseButton, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowAttributes};
-use winit::dpi::PhysicalSize;
-
-// --- UI types (to be removed) ---
-
-pub struct Bounds {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
-}
-
-impl Bounds {
-    pub fn contains_point(&self, px: f32, py: f32) -> bool {
-        px >= self.x
-            && px <= self.x + self.width
-            && py >= self.y
-            && py <= self.y + self.height
-    }
-}
-
-pub enum UiElement {
-    Button { bounds: Bounds, label: String },
-    Checkbox { bounds: Bounds, checked: bool },
-    Panel { bounds: Bounds },
-}
-
-impl UiElement {
-    pub fn bounds(&self) -> &Bounds {
-        match self {
-            UiElement::Button { bounds, .. } => bounds,
-            UiElement::Checkbox { bounds, .. } => bounds,
-            UiElement::Panel { bounds, .. } => bounds,
-        }
-    }
-
-    pub fn contains_point(&self, px: f32, py: f32) -> bool {
-        self.bounds().contains_point(px, py)
-    }
-}
-
-// --- XML -> GPU + UI element builders (to be removed) ---
-
-fn build_ui(xml_path: &str, window_size: PhysicalSize<u32>) -> (Vec<Vertex>, Vec<UiElement>) {
-    let xml = std::fs::read_to_string(xml_path).expect("failed to read ui xml");
-    let tokens = tokenize(&xml).expect("tokenize failed");
-    let nodes = parse(&tokens).expect("parse failed");
-
-    let mut verts = Vec::new();
-    let mut elements = Vec::new();
-    for node in &nodes {
-        collect_vertices(node, window_size, &mut verts);
-        collect_elements(node, &mut elements);
-    }
-    (verts, elements)
-}
-
-fn collect_vertices(node: &Node, window_size: PhysicalSize<u32>, out: &mut Vec<Vertex>) {
-    if let Node::Element { attributes, children, .. } = node {
-        let get = |k: &str| attributes.get(k).and_then(|v| v.parse::<f32>().ok());
-
-        if let (Some(x), Some(y), Some(w), Some(h)) =
-            (get("x"), get("y"), get("width"), get("height"))
-        {
-            let color = [1.0, 1.0, 1.0];
-            out.extend(GpuState::rect_vertices_for_window(window_size, x, y, w, h, color));
-        }
-
-        for child in children {
-            collect_vertices(child, window_size, out);
-        }
-    }
-}
-
-fn collect_elements(node: &Node, out: &mut Vec<UiElement>) {
-    if let Node::Element { tag, attributes, children, .. } = node {
-        let get = |k: &str| attributes.get(k).and_then(|v| v.parse::<f32>().ok());
-
-        if let (Some(x), Some(y), Some(width), Some(height)) =
-            (get("x"), get("y"), get("width"), get("height"))
-        {
-            let bounds = Bounds { x, y, width, height };
-            match tag.as_str() {
-                "button" => {
-                    let label = attributes.get("label").cloned().unwrap_or_default();
-                    out.push(UiElement::Button { bounds, label });
-                }
-                "checkbox" => {
-                    let checked = attributes.get("checked")
-                        .map(|v| v == "true")
-                        .unwrap_or(false);
-                    out.push(UiElement::Checkbox { bounds, checked });
-                }
-                "panel" => {
-                    out.push(UiElement::Panel { bounds });
-                }
-                _ => {}
-            }
-        }
-
-        for child in children {
-            collect_elements(child, out);
-        }
-    }
-}
-
 // --- App init ---
 
 #[derive(Default)]
@@ -123,7 +18,7 @@ struct App {
     fps: Option<FpsTracker>,
     input: InputState,
     ui_elements: Vec<UiElement>,
-    pressed_index: Option<usize>,  
+    pressed_index: Option<usize>,
 }
 
 impl ApplicationHandler for App {
@@ -163,36 +58,36 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => gpu.resize(size),
-	    WindowEvent::MouseInput{ state,   button, ..} => {
-		//button press (to be moved)
-	    if button == MouseButton::Left {
-		let [mx, my] = self.input.mouse.position();
-		let (mx, my) = (mx as f32, my as f32);
+            WindowEvent::Resized(size) => {
+                gpu.resize(size);
+                let (verts, elements) = build_ui("examples/ui.xml", size);
+                gpu.set_vertices(&verts);
+                self.ui_elements = elements;
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                //button press (to be moved)
+                if button == MouseButton::Left {
+                    let [mx, my] = self.input.mouse.position();
+                    let hit = hit_test(&self.ui_elements, mx as f32, my as f32);
 
-		// index of the element under the cursor, if any
-		let hit = self
-		    .ui_elements
-		    .iter()
-		    .position(|e| e.contains_point(mx, my));
-
-		match state {
-		    ElementState::Pressed => {
-			self.pressed_index = hit;
-		    }
-		    ElementState::Released => {
-			let started = self.pressed_index.take();
-			if let (Some(start), Some(end)) = (started, hit) {
-			    if start == end {
-				if let UiElement::Button { label, .. } = &self.ui_elements[end] {
-				    println!("[ui] button clicked: {label}");
-				}
-			    }
-			}
-		    }
-		}
-	    }
-	    }
+                    match state {
+                        ElementState::Pressed => {
+                            self.pressed_index = hit;
+                        }
+                        ElementState::Released => {
+                            let started = self.pressed_index.take();
+                            if let (Some(start), Some(end)) = (started, hit) {
+                                if start == end {
+                                    if let UiElement::Button { label, .. } = &self.ui_elements[end]
+                                    {
+                                        println!("[ui] button clicked: {label}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             WindowEvent::RedrawRequested => {
                 let start = fps.begin_render();
                 if let Err(e) = gpu.render() {
@@ -219,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         fps: None,
         input: InputState::new(),
         ui_elements: Vec::new(),
-	pressed_index: None,
+        pressed_index: None,
     };
     event_loop.run_app(&mut app)?;
     Ok(())

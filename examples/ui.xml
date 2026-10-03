@@ -1,5 +1,12 @@
 <ui>
-    <button x="50" y="50" width="150" height="40" label="I AM THE POOP BUTTON" />
-    <checkbox x="50" y="110" width="20" height="20" checked="false" />
-    <panel x="50" y="150" width="200" height="30" />
+    <button anchor="top-left" x="80" y="50" width="180" height="48" label="Button 1" />
+    <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" />
+    <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" />
+    <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" />
+    <button anchor="top-left" x="80" y="290" width="180" height="48" label="Button 5" />
+    <button anchor="top-right" x="-80" y="290" width="180" height="48" label="Button 6" />
+    <button anchor="top-left" x="80" y="410" width="180" height="48" label="Button 7" />
+    <button anchor="top-right" x="-80" y="410" width="180" height="48" label="Button 8" />
+    <button anchor="top-left" x="80" y="530" width="180" height="48" label="Button 9" />
+    <button anchor="top-right" x="-80" y="530" width="180" height="48" label="Button 10" />
 </ui>

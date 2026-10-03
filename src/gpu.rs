@@ -275,6 +275,10 @@ impl GpuState {
         }
     }
 
+        pub fn set_vertices(&mut self, verts: &[Vertex]) {
+            self.update_vertices(verts);
+        }
+
     /// Create vertex data for a rectangle in pixel coordinates (origin top-left).
     /// `window_size` is used to convert to clip space.
     pub fn rect_vertices_for_window(

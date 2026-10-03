@@ -1,5 +1,3 @@
-use crate::window::{Window, WindowAttributes};
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2 {
     pub x: f32,
@@ -14,9 +12,14 @@ pub struct Anchor {
 
 impl Anchor{
     pub const TOP_LEFT: Self = Self{ x: 0.0, y: 0.0};
+    pub const TOP_CENTER: Self = Self{ x: 0.5, y: 0.0};
+    pub const TOP_RIGHT: Self = Self{ x: 1.0, y: 0.0};
+    pub const CENTER_LEFT: Self = Self{ x: 0.0, y: 0.5};
     pub const CENTER: Self = Self{ x: 0.5, y: 0.5};
-    pub const TOP_RIGHT: Self = Self{ x: 1.0, y: 1.0};
-    pub const STRETC: Self = Self{ x: 1.0, y: 1.0};
+    pub const CENTER_RIGHT: Self = Self{ x: 1.0, y: 0.5};
+    pub const BOTTOM_LEFT: Self = Self{ x: 0.0, y: 1.0};
+    pub const BOTTOM_CENTER: Self = Self{ x: 0.5, y: 1.0};
+    pub const BOTTOM_RIGHT: Self = Self{ x: 1.0, y: 1.0};
 
 }
 
