@@ -1,7 +1,7 @@
 use gs_ui_lib::config::{config, load_runtime_config};
 use gs_ui_lib::debug::FpsTracker;
 use gs_ui_lib::element::{UiElement, build_ui, hit_test};
-use gs_ui_lib::gpu::GpuState;
+use gs_ui_lib::gpu::{GpuState, Vertex};
 use gs_ui_lib::input::InputState;
 
 use std::sync::Arc;
@@ -19,6 +19,24 @@ struct App {
     input: InputState,
     ui_elements: Vec<UiElement>,
     pressed_index: Option<usize>,
+    dragging_index: Option<usize>,
+    drag_offset: [f32; 2],
+}
+
+fn vertices_for_elements(size: winit::dpi::PhysicalSize<u32>, elements: &[UiElement]) -> Vec<Vertex> {
+    let mut vertices = Vec::new();
+    for element in elements {
+        let bounds = element.bounds();
+        vertices.extend(GpuState::rect_vertices_for_window(
+            size,
+            bounds.x,
+            bounds.y,
+            bounds.width,
+            bounds.height,
+            [1.0, 1.0, 1.0],
+        ));
+    }
+    vertices
 }
 
 impl ApplicationHandler for App {
@@ -26,7 +44,8 @@ impl ApplicationHandler for App {
         if self.window.is_none() {
             let window_attrs = WindowAttributes::default()
                 .with_title("ui playground")
-                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 600.0));
+                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 600.0))
+                .with_transparent(true);
 
             let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
             let window_size = window.inner_size();
@@ -64,6 +83,16 @@ impl ApplicationHandler for App {
                 gpu.set_vertices(&verts);
                 self.ui_elements = elements;
             }
+            WindowEvent::CursorMoved { .. } => {
+                if let Some(index) = self.dragging_index {
+                    let [mx, my] = self.input.mouse.position();
+                    let bounds = self.ui_elements[index].bounds_mut();
+                    bounds.x = mx as f32 - self.drag_offset[0];
+                    bounds.y = my as f32 - self.drag_offset[1];
+                    let vertices = vertices_for_elements(gpu.size, &self.ui_elements);
+                    gpu.set_vertices(&vertices);
+                }
+            }
             WindowEvent::MouseInput { state, button, .. } => {
                 //button press (to be moved)
                 if button == MouseButton::Left {
@@ -73,8 +102,15 @@ impl ApplicationHandler for App {
                     match state {
                         ElementState::Pressed => {
                             self.pressed_index = hit;
+                            self.dragging_index =
+                                hit.filter(|index| self.ui_elements[*index].is_movable());
+                            if let Some(index) = self.dragging_index {
+                                let bounds = self.ui_elements[index].bounds();
+                                self.drag_offset = [mx as f32 - bounds.x, my as f32 - bounds.y];
+                            }
                         }
                         ElementState::Released => {
+                            self.dragging_index = None;
                             let started = self.pressed_index.take();
                             if let (Some(start), Some(end)) = (started, hit) {
                                 if start == end {
@@ -100,6 +136,7 @@ impl ApplicationHandler for App {
             _ => {}
         }
     }
+
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -115,6 +152,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         input: InputState::new(),
         ui_elements: Vec::new(),
         pressed_index: None,
+        dragging_index: None,
+        drag_offset: [0.0, 0.0],
     };
     event_loop.run_app(&mut app)?;
     Ok(())

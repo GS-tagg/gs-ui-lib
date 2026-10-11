@@ -58,18 +58,29 @@ fn collect_layout(
                 width: rect.width,
                 height: rect.height,
             };
+            let movable = attributes
+                .get("movable")
+                .is_some_and(|value| value == "true");
             match tag.as_str() {
                 "button" => {
                     let label = attributes.get("label").cloned().unwrap_or_default();
-                    elements.push(UiElement::Button { bounds, label });
+                    elements.push(UiElement::Button {
+                        bounds,
+                        label,
+                        movable,
+                    });
                 }
                 "checkbox" => {
                     let checked = attributes
                         .get("checked")
                         .is_some_and(|value| value == "true");
-                    elements.push(UiElement::Checkbox { bounds, checked });
+                    elements.push(UiElement::Checkbox {
+                        bounds,
+                        checked,
+                        movable,
+                    });
                 }
-                "panel" => elements.push(UiElement::Panel { bounds }),
+                "panel" => elements.push(UiElement::Panel { bounds, movable }),
                 _ => {}
             }
         }
@@ -137,9 +148,20 @@ impl Bounds {
 }
 
 pub enum UiElement {
-    Button { bounds: Bounds, label: String },
-    Checkbox { bounds: Bounds, checked: bool },
-    Panel { bounds: Bounds },
+    Button {
+        bounds: Bounds,
+        label: String,
+        movable: bool,
+    },
+    Checkbox {
+        bounds: Bounds,
+        checked: bool,
+        movable: bool,
+    },
+    Panel {
+        bounds: Bounds,
+        movable: bool,
+    },
 }
 
 impl UiElement {
@@ -147,7 +169,23 @@ impl UiElement {
         match self {
             UiElement::Button { bounds, .. }
             | UiElement::Checkbox { bounds, .. }
-            | UiElement::Panel { bounds } => bounds,
+            | UiElement::Panel { bounds, .. } => bounds,
+        }
+    }
+
+    pub fn bounds_mut(&mut self) -> &mut Bounds {
+        match self {
+            UiElement::Button { bounds, .. }
+            | UiElement::Checkbox { bounds, .. }
+            | UiElement::Panel { bounds, .. } => bounds,
+        }
+    }
+
+    pub fn is_movable(&self) -> bool {
+        match self {
+            UiElement::Button { movable, .. }
+            | UiElement::Checkbox { movable, .. }
+            | UiElement::Panel { movable, .. } => *movable,
         }
     }
 }

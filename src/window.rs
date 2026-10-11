@@ -1,6 +1,6 @@
 use crate::input::InputState;
 use crate::gpu::{GpuState, Vertex};
-use crate::debug::{FpsTracker};
+use crate::debug::FpsTracker;
 use crate::config::{config, load_runtime_config, save_runtime_config};
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
@@ -20,7 +20,8 @@ impl ApplicationHandler for App {
         if self.window.is_none() {
             let window_attrs = WindowAttributes::default()
                 .with_title("space-game")
-                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 600.0));
+                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 600.0))
+                .with_transparent(true);
 
             let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
             let gpu = GpuState::new(window.clone(), &[] as &[Vertex]);
@@ -72,6 +73,7 @@ impl ApplicationHandler for App {
             _ => {}
         }
     }
+
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {

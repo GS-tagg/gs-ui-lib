@@ -1,9 +1,9 @@
 <ui>
-    <button anchor="top-left" x="80" y="50" width="180" height="48" label="Button 1" />
-    <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" />
-    <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" />
-    <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" />
-    <button anchor="top-left" x="80" y="290" width="180" height="48" label="Button 5" />
+    <button anchor="top-left" x="80" y="50" width="180" height="48" label="Button 1" movable="true" />
+    <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" movable="true" />
+    <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" movable="true" />
+    <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" movable="true" />
+    <button anchor="top-left" x="80" y="290" width="180" height="48" label="Button 5" movable="true" />
     <button anchor="top-right" x="-80" y="290" width="180" height="48" label="Button 6" />
     <button anchor="top-left" x="80" y="410" width="180" height="48" label="Button 7" />
     <button anchor="top-right" x="-80" y="410" width="180" height="48" label="Button 8" />

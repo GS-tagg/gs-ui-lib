@@ -1,7 +1,6 @@
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-
 pub struct FpsTracker {
     frame_duration: Duration,
     fps_counter: u32,

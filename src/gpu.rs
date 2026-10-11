@@ -21,7 +21,6 @@ impl GpuState {
         // Instance: Entry point for GPU backends
         let instance = wgpu::Instance::default();
 
-        // Surface: Visual context tied to the window
         let surface = instance
             .create_surface(window.clone())
             .expect("Failed to create surface");
@@ -48,6 +47,17 @@ impl GpuState {
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
+        let alpha_mode = [
+            wgpu::CompositeAlphaMode::PreMultiplied,
+            wgpu::CompositeAlphaMode::PostMultiplied,
+            wgpu::CompositeAlphaMode::Inherit,
+        ]
+        .into_iter()
+        .find(|mode| surface_caps.alpha_modes.contains(mode))
+        .unwrap_or_else(|| {
+            eprintln!("[gpu] surface does not support transparency; using opaque alpha mode");
+            surface_caps.alpha_modes[0]
+        });
 
         // Toggle this to false to disable VSync and test uncapped FPS.
 
@@ -93,7 +103,7 @@ impl GpuState {
             width: size.width.max(1),
             height: size.height.max(1),
             present_mode,
-            alpha_mode: surface_caps.alpha_modes[0],
+            alpha_mode,
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
@@ -230,7 +240,7 @@ impl GpuState {
                             r: 0.0,
                             g: 0.0,
                             b: 0.0,
-                            a: 1.0,
+                            a: 0.5,
                         }),
                         store: wgpu::StoreOp::Store,
                     },
