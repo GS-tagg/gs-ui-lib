@@ -181,7 +181,7 @@ impl GpuState {
                 compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
             }),
@@ -240,7 +240,7 @@ impl GpuState {
                             r: 0.0,
                             g: 0.0,
                             b: 0.0,
-                            a: 0.5,
+                            a: 0.3,
                         }),
                         store: wgpu::StoreOp::Store,
                     },
@@ -297,7 +297,7 @@ impl GpuState {
         y: f32,
         w: f32,
         h: f32,
-        color: [f32; 3],
+        color: [f32; 4],
     ) -> Vec<Vertex> {
         let width = window_size.width as f32;
         let height = window_size.height as f32;
@@ -347,7 +347,7 @@ impl GpuState {
 #[derive(Copy, Clone)]
 pub struct Vertex {
     pub position: [f32; 2],
-    pub color: [f32; 3],
+    pub color: [f32; 4],
 }
 
 impl Vertex {
@@ -367,7 +367,7 @@ impl Vertex {
                 wgpu::VertexAttribute {
                     offset: std::mem::offset_of!(Vertex, color) as wgpu::BufferAddress,
                     shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float32x4,
                 },
             ],
         }

@@ -1,12 +1,22 @@
+<!--    "top-left" => Anchor::TOP_LEFT,
+        "top-center" => Anchor::TOP_CENTER,
+        "top-right" => Anchor::TOP_RIGHT,
+        "center-left" => Anchor::CENTER_LEFT,
+        "center" => Anchor::CENTER,
+        "center-right" => Anchor::CENTER_RIGHT,
+        "bottom-left" => Anchor::BOTTOM_LEFT,
+        "bottom-center" => Anchor::BOTTOM_CENTER,
+        "bottom-right" => Anchor::BOTTOM_RIGHT, -->
+
 <ui>
-    <button anchor="top-left" x="80" y="50" width="180" height="48" label="Button 1" movable="true" />
-    <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" movable="true" />
-    <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" movable="true" />
-    <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" movable="true" />
-    <button anchor="top-left" x="80" y="290" width="180" height="48" label="Button 5" movable="true" />
-    <button anchor="top-right" x="-80" y="290" width="180" height="48" label="Button 6" />
-    <button anchor="top-left" x="80" y="410" width="180" height="48" label="Button 7" />
-    <button anchor="top-right" x="-80" y="410" width="180" height="48" label="Button 8" />
-    <button anchor="top-left" x="80" y="530" width="180" height="48" label="Button 9" />
-    <button anchor="top-right" x="-80" y="530" width="180" height="48" label="Button 10" />
+    <button anchor="top-left" x="80" y="50" width="180" height="48" label="Button 1" color="#EF476F" movable="true" />
+    <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" color="#06D6A0" movable="true" />
+    <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" color="#FFD166" opacity="0.55" movable="true" />
+    <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" color="#118AB2" movable="true" />
+    <button anchor="center" x="-210" y="14" width="180" height="48" label="Button 5" color="#F78C6B" movable="true" />
+    <button anchor="center-right" x="-80" y="14" width="180" height="48" label="Button 6" color="#9B5DE5" />
+    <button anchor="center-left" x="80" y="134" width="180" height="48" label="Button 7" color="#00BBF9" />
+    <button anchor="bottom-right" x="-80" y="-142" width="180" height="48" label="Button 8" color="#F15BB5" opacity="0.6" />
+    <button anchor="bottom-left" x="80" y="-22" width="180" height="48" label="Button 9" color="#90BE6D" />
+    <button anchor="bottom-right" x="-80" y="-22" width="180" height="48" label="Button 10" color="#F8961E" />
 </ui>

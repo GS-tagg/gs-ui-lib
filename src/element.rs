@@ -43,13 +43,22 @@ fn collect_layout(
     {
         let element_rect = resolve_element_rect(attributes, parent);
         if let Some(rect) = element_rect {
+            let color = parse_color(attributes.get("color").map(String::as_str))
+                .unwrap_or([1.0, 1.0, 1.0]);
+            let opacity = attributes
+                .get("opacity")
+                .and_then(|value| value.parse::<f32>().ok())
+                .filter(|value| value.is_finite())
+                .unwrap_or(1.0)
+                .clamp(0.0, 1.0);
+            let rgba = [color[0], color[1], color[2], opacity];
             vertices.extend(GpuState::rect_vertices_for_window(
                 window_size,
                 rect.x,
                 rect.y,
                 rect.width,
                 rect.height,
-                [1.0, 1.0, 1.0],
+                rgba,
             ));
 
             let bounds = Bounds {
@@ -68,6 +77,7 @@ fn collect_layout(
                         bounds,
                         label,
                         movable,
+                        color: rgba,
                     });
                 }
                 "checkbox" => {
@@ -78,9 +88,14 @@ fn collect_layout(
                         bounds,
                         checked,
                         movable,
+                        color: rgba,
                     });
                 }
-                "panel" => elements.push(UiElement::Panel { bounds, movable }),
+                "panel" => elements.push(UiElement::Panel {
+                    bounds,
+                    movable,
+                    color: rgba,
+                }),
                 _ => {}
             }
         }
@@ -90,6 +105,21 @@ fn collect_layout(
             collect_layout(child, child_parent, window_size, vertices, elements);
         }
     }
+}
+
+fn parse_color(value: Option<&str>) -> Option<[f32; 3]> {
+    let value = value?.strip_prefix('#')?;
+    if value.len() != 6 {
+        return None;
+    }
+    let red = u8::from_str_radix(&value[0..2], 16).ok()?;
+    let green = u8::from_str_radix(&value[2..4], 16).ok()?;
+    let blue = u8::from_str_radix(&value[4..6], 16).ok()?;
+    Some([
+        red as f32 / 255.0,
+        green as f32 / 255.0,
+        blue as f32 / 255.0,
+    ])
 }
 
 fn resolve_element_rect(attributes: &BTreeMap<String, String>, parent: Rect) -> Option<Rect> {
@@ -102,7 +132,7 @@ fn resolve_element_rect(attributes: &BTreeMap<String, String>, parent: Rect) -> 
         None => anchor,
     };
 
-    Some(resolve_anchor(
+    let mut rect = resolve_anchor(
         parent,
         Vec2 { x: width, y: height },
         &AnchorConstraints {
@@ -113,7 +143,17 @@ fn resolve_element_rect(attributes: &BTreeMap<String, String>, parent: Rect) -> 
                 y: value("y").unwrap_or(0.0),
             },
         },
-    ))
+    );
+    rect.width = rect.width.max(0.0).min(parent.width.max(0.0));
+    rect.height = rect.height.max(0.0).min(parent.height.max(0.0));
+    rect.x = rect
+        .x
+        .clamp(parent.x, (parent.x + parent.width - rect.width).max(parent.x));
+    rect.y = rect
+        .y
+        .clamp(parent.y, (parent.y + parent.height - rect.height).max(parent.y));
+
+    Some(rect)
 }
 
 fn parse_anchor(value: Option<&String>) -> Option<Anchor> {
@@ -152,15 +192,18 @@ pub enum UiElement {
         bounds: Bounds,
         label: String,
         movable: bool,
+        color: [f32; 4],
     },
     Checkbox {
         bounds: Bounds,
         checked: bool,
         movable: bool,
+        color: [f32; 4],
     },
     Panel {
         bounds: Bounds,
         movable: bool,
+        color: [f32; 4],
     },
 }
 
@@ -170,6 +213,14 @@ impl UiElement {
             UiElement::Button { bounds, .. }
             | UiElement::Checkbox { bounds, .. }
             | UiElement::Panel { bounds, .. } => bounds,
+        }
+    }
+
+    pub fn color(&self) -> [f32; 4] {
+        match self {
+            UiElement::Button { color, .. }
+            | UiElement::Checkbox { color, .. }
+            | UiElement::Panel { color, .. } => *color,
         }
     }
 
@@ -233,5 +284,27 @@ mod tests {
         assert_eq!(large.x + large.width, 1840.0);
         assert_eq!(small.y, 50.0);
         assert_eq!(large.y, 50.0);
+    }
+
+    #[test]
+    fn bottom_anchor_stays_inside_a_short_parent() {
+        let attributes = BTreeMap::from([
+            ("x".to_string(), "-80".to_string()),
+            ("y".to_string(), "-170".to_string()),
+            ("width".to_string(), "180".to_string()),
+            ("height".to_string(), "48".to_string()),
+            ("anchor".to_string(), "bottom-right".to_string()),
+        ]);
+
+        let rect = resolve_element_rect(
+            &attributes,
+            Rect { x: 0.0, y: 0.0, width: 300.0, height: 120.0 },
+        )
+        .unwrap();
+
+        assert!(rect.x >= 0.0);
+        assert!(rect.y >= 0.0);
+        assert!(rect.x + rect.width <= 300.0);
+        assert!(rect.y + rect.height <= 120.0);
     }
 }

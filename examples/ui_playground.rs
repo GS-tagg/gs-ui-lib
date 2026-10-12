@@ -33,7 +33,7 @@ fn vertices_for_elements(size: winit::dpi::PhysicalSize<u32>, elements: &[UiElem
             bounds.y,
             bounds.width,
             bounds.height,
-            [1.0, 1.0, 1.0],
+            element.color(),
         ));
     }
     vertices
