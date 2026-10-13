@@ -1,6 +1,5 @@
 use pollster::block_on;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 use winit::window::Window;
 
 pub struct GpuState {
@@ -11,6 +10,7 @@ pub struct GpuState {
     pub size: winit::dpi::PhysicalSize<u32>,
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    vertex_buffer_capacity: u64,
     vertex_count: u32,
 }
 
@@ -112,20 +112,17 @@ impl GpuState {
 
         let pipeline = Self::create_pipeline(&device, &config);
         let vertex_count = vertices.len() as u32;
-        let vertex_buffer = if vertices.is_empty() {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Fallback Vertex Buffer"),
-                size: std::mem::size_of::<Vertex>() as u64,
-                usage: wgpu::BufferUsages::VERTEX,
-                mapped_at_creation: false,
-            })
-        } else {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: vertices_to_bytes(vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            })
-        };
+        let vertex_buffer_capacity = (vertices.len() * std::mem::size_of::<Vertex>())
+            .max(std::mem::size_of::<Vertex>()) as u64;
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex Buffer"),
+            size: vertex_buffer_capacity,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        if !vertices.is_empty() {
+            queue.write_buffer(&vertex_buffer, 0, vertices_to_bytes(vertices));
+        }
 
         Self {
             surface,
@@ -135,6 +132,7 @@ impl GpuState {
             size,
             pipeline,
             vertex_buffer,
+            vertex_buffer_capacity,
             vertex_count,
         }
     }
@@ -264,30 +262,27 @@ impl GpuState {
         Ok(())
     }
 
-    /// Replace the current vertex buffer with new vertices for the next frame.
+    /// Update vertex data, growing the buffer only when the new data needs more space.
     pub fn update_vertices(&mut self, vertices: &[Vertex]) {
         self.vertex_count = vertices.len() as u32;
-        if vertices.is_empty() {
+        let bytes = vertices_to_bytes(vertices);
+        if !bytes.is_empty() && bytes.len() as u64 > self.vertex_buffer_capacity {
+            self.vertex_buffer_capacity = bytes.len() as u64;
             self.vertex_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Fallback Vertex Buffer"),
-                size: std::mem::size_of::<Vertex>() as u64,
-                usage: wgpu::BufferUsages::VERTEX,
+                label: Some("Vertex Buffer"),
+                size: self.vertex_buffer_capacity,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-        } else {
-            self.vertex_buffer =
-                self.device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Vertex Buffer"),
-                        contents: vertices_to_bytes(vertices),
-                        usage: wgpu::BufferUsages::VERTEX,
-                    });
+        }
+        if !bytes.is_empty() {
+            self.queue.write_buffer(&self.vertex_buffer, 0, bytes);
         }
     }
 
-        pub fn set_vertices(&mut self, verts: &[Vertex]) {
-            self.update_vertices(verts);
-        }
+    pub fn set_vertices(&mut self, verts: &[Vertex]) {
+        self.update_vertices(verts);
+    }
 
     /// Create vertex data for a rectangle in pixel coordinates (origin top-left).
     /// `window_size` is used to convert to clip space.

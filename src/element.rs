@@ -1,14 +1,21 @@
-use crate::anchor::{resolve_anchor, Anchor, AnchorConstraints, Rect, Vec2};
+use crate::anchor::{Anchor, AnchorConstraints, Rect, Vec2, resolve_anchor};
 use crate::gpu::{GpuState, Vertex};
-use gs_xml_parser::{parse, tokenize, Node};
+use gs_xml_parser::{Node, parse, tokenize};
 use std::collections::BTreeMap;
 use winit::dpi::PhysicalSize;
 
 pub fn build_ui(xml_path: &str, window_size: PhysicalSize<u32>) -> (Vec<Vertex>, Vec<UiElement>) {
+    let nodes = load_ui_nodes(xml_path);
+    layout_ui(&nodes, window_size)
+}
+
+pub fn load_ui_nodes(xml_path: &str) -> Vec<Node> {
     let xml = std::fs::read_to_string(xml_path).expect("failed to read ui xml");
     let tokens = tokenize(&xml).expect("tokenize failed");
-    let nodes = parse(&tokens).expect("parse failed");
+    parse(&tokens).expect("parse failed")
+}
 
+pub fn layout_ui(nodes: &[Node], window_size: PhysicalSize<u32>) -> (Vec<Vertex>, Vec<UiElement>) {
     if window_size.width == 0 || window_size.height == 0 {
         return (Vec::new(), Vec::new());
     }
@@ -21,7 +28,7 @@ pub fn build_ui(xml_path: &str, window_size: PhysicalSize<u32>) -> (Vec<Vertex>,
     };
     let mut vertices = Vec::new();
     let mut elements = Vec::new();
-    for node in &nodes {
+    for node in nodes {
         collect_layout(node, parent, window_size, &mut vertices, &mut elements);
     }
     (vertices, elements)
@@ -43,8 +50,8 @@ fn collect_layout(
     {
         let element_rect = resolve_element_rect(attributes, parent);
         if let Some(rect) = element_rect {
-            let color = parse_color(attributes.get("color").map(String::as_str))
-                .unwrap_or([1.0, 1.0, 1.0]);
+            let color =
+                parse_color(attributes.get("color").map(String::as_str)).unwrap_or([1.0, 1.0, 1.0]);
             let opacity = attributes
                 .get("opacity")
                 .and_then(|value| value.parse::<f32>().ok())
@@ -134,7 +141,10 @@ fn resolve_element_rect(attributes: &BTreeMap<String, String>, parent: Rect) -> 
 
     let mut rect = resolve_anchor(
         parent,
-        Vec2 { x: width, y: height },
+        Vec2 {
+            x: width,
+            y: height,
+        },
         &AnchorConstraints {
             target_anchor: anchor,
             pivot,
@@ -146,12 +156,14 @@ fn resolve_element_rect(attributes: &BTreeMap<String, String>, parent: Rect) -> 
     );
     rect.width = rect.width.max(0.0).min(parent.width.max(0.0));
     rect.height = rect.height.max(0.0).min(parent.height.max(0.0));
-    rect.x = rect
-        .x
-        .clamp(parent.x, (parent.x + parent.width - rect.width).max(parent.x));
-    rect.y = rect
-        .y
-        .clamp(parent.y, (parent.y + parent.height - rect.height).max(parent.y));
+    rect.x = rect.x.clamp(
+        parent.x,
+        (parent.x + parent.width - rect.width).max(parent.x),
+    );
+    rect.y = rect.y.clamp(
+        parent.y,
+        (parent.y + parent.height - rect.height).max(parent.y),
+    );
 
     Some(rect)
 }
@@ -180,10 +192,7 @@ pub struct Bounds {
 
 impl Bounds {
     pub fn contains_point(&self, px: f32, py: f32) -> bool {
-        px >= self.x
-            && px <= self.x + self.width
-            && py >= self.y
-            && py <= self.y + self.height
+        px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
     }
 }
 
@@ -247,8 +256,7 @@ pub fn hit_test(elements: &[UiElement], x: f32, y: f32) -> Option<usize> {
         .enumerate()
         .rev()
         .find(|(_, element)| {
-            !matches!(element, UiElement::Panel { .. })
-                && element.bounds().contains_point(x, y)
+            !matches!(element, UiElement::Panel { .. }) && element.bounds().contains_point(x, y)
         })
         .map(|(index, _)| index)
 }
@@ -271,12 +279,22 @@ mod tests {
 
         let small = resolve_element_rect(
             &attributes,
-            Rect { x: 0.0, y: 0.0, width: 800.0, height: 600.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 800.0,
+                height: 600.0,
+            },
         )
         .unwrap();
         let large = resolve_element_rect(
             &attributes,
-            Rect { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 1920.0,
+                height: 1080.0,
+            },
         )
         .unwrap();
 
@@ -298,7 +316,12 @@ mod tests {
 
         let rect = resolve_element_rect(
             &attributes,
-            Rect { x: 0.0, y: 0.0, width: 300.0, height: 120.0 },
+            Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 300.0,
+                height: 120.0,
+            },
         )
         .unwrap();
 
