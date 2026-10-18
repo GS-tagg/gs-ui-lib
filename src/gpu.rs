@@ -96,6 +96,9 @@ impl GpuState {
             surface_caps.present_modes[0]
         };
         //end of vsync
+        println!("present modes: {:?}", surface_caps.present_modes);
+        println!("alpha modes:   {:?}", surface_caps.alpha_modes);
+        println!("chosen: {:?} / {:?}", present_mode, alpha_mode);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,

@@ -3,6 +3,7 @@ use crate::debug::{FpsTracker, FramePacer};
 use crate::gpu::{GpuState, Vertex};
 use crate::input::InputState;
 use std::sync::Arc;
+use std::time::Duration;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -76,14 +77,36 @@ impl WindowContext {
         }
     }
 
+    pub fn begin_redraw(&mut self) -> bool {
+        self.frame_pacer.begin_frame(std::time::Instant::now())
+    }
+
     pub fn request_redraw(&mut self, event_loop: &ActiveEventLoop) {
+        let cfg = *config();
+        let target_duration = Duration::from_secs_f64(1.0 / cfg.target_fps.max(1) as f64);
+        let frame_duration = if cfg.vsync_enabled {
+            self.window
+                .current_monitor()
+                .and_then(|monitor| monitor.refresh_rate_millihertz())
+                .filter(|refresh_rate| *refresh_rate > 0)
+                .map(|refresh_rate| {
+                    target_duration.max(Duration::from_secs_f64(1_000.0 / refresh_rate as f64))
+                })
+                .unwrap_or(target_duration)
+        } else {
+            target_duration
+        };
+        self.frame_pacer.set_frame_duration(frame_duration);
+
         if self
             .frame_pacer
             .should_request_redraw(std::time::Instant::now())
         {
             self.window.request_redraw();
+            event_loop.set_control_flow(ControlFlow::Wait);
+        } else {
+            event_loop.set_control_flow(ControlFlow::WaitUntil(self.frame_pacer.next_frame_time()));
         }
-        event_loop.set_control_flow(ControlFlow::WaitUntil(self.frame_pacer.next_frame_time()));
     }
 }
 
@@ -130,6 +153,9 @@ impl ApplicationHandler for App {
             }
 
             WindowEvent::RedrawRequested => {
+                if !window.begin_redraw() {
+                    return;
+                }
                 let cfg = config();
                 let start = fps.begin_render();
                 if let Err(e) = window.gpu_mut().render() {

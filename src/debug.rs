@@ -56,6 +56,7 @@ impl FpsTracker {
 pub struct FramePacer {
     frame_duration: Duration,
     next_frame_time: Instant,
+    redraw_pending: bool,
 }
 
 impl FramePacer {
@@ -65,10 +66,29 @@ impl FramePacer {
         Self {
             frame_duration,
             next_frame_time: Instant::now(),
+            redraw_pending: false,
+        }
+    }
+
+    pub fn set_frame_duration(&mut self, frame_duration: Duration) {
+        if self.frame_duration != frame_duration {
+            self.frame_duration = frame_duration;
+            self.next_frame_time = Instant::now();
+            self.redraw_pending = false;
         }
     }
 
     pub fn should_request_redraw(&mut self, now: Instant) -> bool {
+        if self.redraw_pending || now < self.next_frame_time {
+            return false;
+        }
+
+        self.redraw_pending = true;
+        true
+    }
+
+    pub fn begin_frame(&mut self, now: Instant) -> bool {
+        self.redraw_pending = false;
         if now < self.next_frame_time {
             return false;
         }
@@ -77,8 +97,33 @@ impl FramePacer {
         true
     }
 
-    
-pub fn next_frame_time(&self) -> Instant {
+    pub fn next_frame_time(&self) -> Instant {
         self.next_frame_time
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FramePacer;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn frame_pacer_limits_frames_and_ignores_early_redraws() {
+        let frame_duration = Duration::from_millis(13);
+        let mut pacer = FramePacer::new(60);
+        pacer.set_frame_duration(frame_duration);
+        let start = Instant::now();
+
+        assert!(pacer.should_request_redraw(start));
+        assert!(!pacer.should_request_redraw(start));
+        assert!(pacer.begin_frame(start));
+
+        let early = start + frame_duration / 2;
+        assert!(!pacer.begin_frame(early));
+        assert!(!pacer.should_request_redraw(early));
+
+        let next_frame = start + frame_duration;
+        assert!(pacer.should_request_redraw(next_frame));
+        assert!(pacer.begin_frame(next_frame));
     }
 }

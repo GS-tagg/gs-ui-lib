@@ -124,6 +124,10 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::RedrawRequested => {
+                if !window.begin_redraw() {
+                    return;
+                }
+
                 if self.resize_pending {
                     self.resize_pending = false;
                     let size = window.window().inner_size();
