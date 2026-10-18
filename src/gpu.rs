@@ -204,7 +204,7 @@ impl GpuState {
         let output = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(tex) => tex,
             wgpu::CurrentSurfaceTexture::Suboptimal(tex) => {
-                // still usable, but reconfigure next time for best performance
+                // still usable, but reconfigure next time for best perormance
                 tex
             }
             wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
