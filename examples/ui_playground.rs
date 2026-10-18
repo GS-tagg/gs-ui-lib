@@ -1,21 +1,20 @@
-use gs_ui_lib::config::{config, load_runtime_config};
+use gs_ui_lib::config::config;
 use gs_ui_lib::debug::FpsTracker;
 use gs_ui_lib::element::{UiElement, hit_test, layout_ui, load_ui_nodes};
 use gs_ui_lib::gpu::{GpuState, Vertex};
 use gs_ui_lib::input::InputState;
+use gs_ui_lib::window::{self, WindowContext};
 use gs_xml_parser::Node;
 
-use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{Window, WindowAttributes};
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
+use winit::window::WindowAttributes;
 // --- App init ---
 
 #[derive(Default)]
 struct App {
-    window: Option<Arc<Window>>,
-    gpu: Option<GpuState>,
+    window: Option<WindowContext>,
     fps: Option<FpsTracker>,
     input: InputState,
     ui_nodes: Vec<Node>,
@@ -53,19 +52,17 @@ impl ApplicationHandler for App {
                 .with_inner_size(winit::dpi::LogicalSize::new(800.0, 600.0))
                 .with_transparent(true);
 
-            let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
-            let window_size = window.inner_size();
+            let native_window = window::create_window(event_loop, window_attrs);
+            let window_size = native_window.inner_size();
 
             let ui_nodes = load_ui_nodes("examples/ui.xml");
             let (verts, ui_elements) = layout_ui(&ui_nodes, window_size);
-            let gpu = GpuState::new(window.clone(), &verts);
+            let window = WindowContext::new(native_window, &verts);
 
             self.window = Some(window);
-            self.gpu = Some(gpu);
             self.ui_nodes = ui_nodes;
             self.ui_elements = ui_elements;
-            let cfg = config();
-            self.fps = Some(FpsTracker::new(cfg.target_fps as f32));
+            self.fps = Some(FpsTracker::new());
         }
     }
 
@@ -75,13 +72,12 @@ impl ApplicationHandler for App {
         _id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let (Some(gpu), Some(window), Some(fps)) =
-            (self.gpu.as_mut(), self.window.as_ref(), self.fps.as_mut())
-        else {
+        let (Some(window), Some(fps)) = (self.window.as_mut(), self.fps.as_mut()) else {
             return;
         };
 
         self.input.update(&event);
+        window.handle_window_event(&event);
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
@@ -92,8 +88,8 @@ impl ApplicationHandler for App {
                     let bounds = self.ui_elements[index].bounds_mut();
                     bounds.x = mx as f32 - self.drag_offset[0];
                     bounds.y = my as f32 - self.drag_offset[1];
-                    let vertices = vertices_for_elements(gpu.size, &self.ui_elements);
-                    gpu.set_vertices(&vertices);
+                    let vertices = vertices_for_elements(window.gpu().size, &self.ui_elements);
+                    window.gpu_mut().set_vertices(&vertices);
                 }
             }
             WindowEvent::MouseInput { state, button, .. } => {
@@ -130,35 +126,43 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 if self.resize_pending {
                     self.resize_pending = false;
-                    let size = window.inner_size();
-                    gpu.resize(size);
+                    let size = window.window().inner_size();
+                    window.gpu_mut().resize(size);
                     let (vertices, elements) = layout_ui(&self.ui_nodes, size);
-                    gpu.set_vertices(&vertices);
+                    window.gpu_mut().set_vertices(&vertices);
                     self.ui_elements = elements;
                 }
 
                 let start = fps.begin_render();
-                if let Err(e) = gpu.render() {
+                if let Err(e) = window.gpu_mut().render() {
                     eprintln!("Render error: {e:?}");
                 }
                 fps.end_render(start);
+                if config().fps_tracker_enabled {
+                    fps.tick();
+                }
                 self.input.end_frame();
-                window.request_redraw();
             }
             _ => {}
         }
     }
+
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let Some(window) = self.window.as_mut() else {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            return;
+        };
+
+        window.request_redraw(event_loop);
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    load_runtime_config()?;
-
-    let event_loop = EventLoop::new()?;
-    event_loop.set_control_flow(ControlFlow::Poll);
+    let event_loop = window::init()?;
+    print!("Loaded runtime config: {}\n", *config());
 
     let mut app = App {
         window: None,
-        gpu: None,
         fps: None,
         input: InputState::new(),
         ui_nodes: Vec::new(),

@@ -13,7 +13,7 @@
     <button anchor="top-right" x="-80" y="50" width="180" height="48" label="Button 2" color="#06D6A0" movable="true" />
     <button anchor="top-left" x="80" y="170" width="180" height="48" label="Button 3" color="#FFD166" opacity="0.55" movable="true" />
     <button anchor="top-right" x="-80" y="170" width="180" height="48" label="Button 4" color="#118AB2" movable="true" />
-    <button anchor="center" x="-210" y="14" width="180" height="48" label="Button 5" color="#F78C6B" movable="true" />
+    <button anchor="center" x="0" y="14" width="180" height="48" label="Button 5" color="#F78C6B" movable="true" />
     <button anchor="center-right" x="-80" y="14" width="180" height="48" label="Button 6" color="#9B5DE5" />
     <button anchor="center-left" x="80" y="134" width="180" height="48" label="Button 7" color="#00BBF9" />
     <button anchor="bottom-right" x="-80" y="-142" width="180" height="48" label="Button 8" color="#F15BB5" opacity="0.6" />

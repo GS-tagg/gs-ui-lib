@@ -11,6 +11,16 @@ pub struct RuntimeConfig {
     pub input_debug_enabled: bool,
 }
 
+impl std::fmt::Display for RuntimeConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RuntimeConfig {{ fps_tracker_enabled: {}, vsync_enabled: {}, target_fps: {}, input_debug_enabled: {} }}",
+            self.fps_tracker_enabled, self.vsync_enabled, self.target_fps, self.input_debug_enabled
+        )
+    }
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
