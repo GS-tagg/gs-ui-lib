@@ -1,6 +1,6 @@
 use gs_ui_lib::config::config;
 use gs_ui_lib::debug::FpsTracker;
-use gs_ui_lib::element::{UiElement, hit_test, layout_ui, load_ui_nodes};
+use gs_ui_lib::element::{UiElement, hit_test, layout_ui, load_ui_nodes, resize_ui_elements};
 use gs_ui_lib::gpu::{GpuState, Vertex};
 use gs_ui_lib::input::InputState;
 use gs_ui_lib::window::{self, WindowContext};
@@ -130,11 +130,12 @@ impl ApplicationHandler for App {
 
                 if self.resize_pending {
                     self.resize_pending = false;
+                    let old_size = window.gpu().size;
                     let size = window.window().inner_size();
                     window.gpu_mut().resize(size);
-                    let (vertices, elements) = layout_ui(&self.ui_nodes, size);
+                    resize_ui_elements(&mut self.ui_elements, old_size, size);
+                    let vertices = vertices_for_elements(size, &self.ui_elements);
                     window.gpu_mut().set_vertices(&vertices);
-                    self.ui_elements = elements;
                 }
 
                 let start = fps.begin_render();

@@ -4,6 +4,9 @@ use gs_xml_parser::{Node, parse, tokenize};
 use std::collections::BTreeMap;
 use winit::dpi::PhysicalSize;
 
+pub const DESIGN_WIDTH: f32 = 800.0;
+pub const DESIGN_HEIGHT: f32 = 600.0;
+
 pub fn build_ui(xml_path: &str, window_size: PhysicalSize<u32>) -> (Vec<Vertex>, Vec<UiElement>) {
     let nodes = load_ui_nodes(xml_path);
     layout_ui(&nodes, window_size)
@@ -23,8 +26,8 @@ pub fn layout_ui(nodes: &[Node], window_size: PhysicalSize<u32>) -> (Vec<Vertex>
     let parent = Rect {
         x: 0.0,
         y: 0.0,
-        width: window_size.width as f32,
-        height: window_size.height as f32,
+        width: DESIGN_WIDTH,
+        height: DESIGN_HEIGHT,
     };
     let mut vertices = Vec::new();
     let mut elements = Vec::new();
@@ -32,6 +35,44 @@ pub fn layout_ui(nodes: &[Node], window_size: PhysicalSize<u32>) -> (Vec<Vertex>
         collect_layout(node, parent, window_size, &mut vertices, &mut elements);
     }
     (vertices, elements)
+}
+
+pub fn resize_ui_elements(
+    elements: &mut [UiElement],
+    old_size: PhysicalSize<u32>,
+    new_size: PhysicalSize<u32>,
+) {
+    if old_size.width == 0
+        || old_size.height == 0
+        || new_size.width == 0
+        || new_size.height == 0
+    {
+        return;
+    }
+
+    let old_viewport = design_layout_rect(old_size);
+    let new_viewport = design_layout_rect(new_size);
+    let scale = new_viewport.width / old_viewport.width;
+
+    for element in elements {
+        let bounds = element.bounds_mut();
+        bounds.x = new_viewport.x + (bounds.x - old_viewport.x) * scale;
+        bounds.y = new_viewport.y + (bounds.y - old_viewport.y) * scale;
+        bounds.width *= scale;
+        bounds.height *= scale;
+    }
+}
+
+fn scale_rect_to_window(rect: Rect, window_size: PhysicalSize<u32>) -> Rect {
+    let viewport = design_layout_rect(window_size);
+    let scale = viewport.width / DESIGN_WIDTH;
+
+    Rect {
+        x: viewport.x + rect.x * scale,
+        y: viewport.y + rect.y * scale,
+        width: rect.width * scale,
+        height: rect.height * scale,
+    }
 }
 
 fn collect_layout(
@@ -49,7 +90,8 @@ fn collect_layout(
     } = node
     {
         let element_rect = resolve_element_rect(attributes, parent);
-        if let Some(rect) = element_rect {
+        if let Some(design_rect) = element_rect {
+            let rect = scale_rect_to_window(design_rect, window_size);
             let color =
                 parse_color(attributes.get("color").map(String::as_str)).unwrap_or([1.0, 1.0, 1.0]);
             let opacity = attributes
@@ -259,6 +301,21 @@ pub fn hit_test(elements: &[UiElement], x: f32, y: f32) -> Option<usize> {
             !matches!(element, UiElement::Panel { .. }) && element.bounds().contains_point(x, y)
         })
         .map(|(index, _)| index)
+}
+
+fn design_layout_rect(window_size: PhysicalSize<u32>) -> Rect {
+    let window_width = window_size.width as f32;
+    let window_height = window_size.height as f32;
+    let scale = (window_width / DESIGN_WIDTH).min(window_height / DESIGN_HEIGHT);
+    let content_width = DESIGN_WIDTH * scale;
+    let content_height = DESIGN_HEIGHT * scale;
+
+    Rect {
+        x: (window_width - content_width) * 0.5,
+        y: (window_height - content_height) * 0.5,
+        width: content_width,
+        height: content_height,
+    }
 }
 
 #[cfg(test)]
